@@ -1,0 +1,19 @@
+#On thinlinc, copy counts.tsv from counts folder to RIPSeq folder
+#Copy experiment.txt from desktop to server
+scp /Users/priyankamukherjee/Desktop/experiment.txt primukh@carbonate.uits.iu.edu:/N/slate/primukh/FLAGRIPSeq/Raw_data/Unzipped_files/Results_FLAGRIP/RIPSEq_Analysis
+
+#Open R_Version 4.1.1
+
+library(DESeq2)
+#Version 1.34.0
+
+library("gplots")
+library("RColorBrewer")
+library("genefilter")
+library("IHW")
+library("pheatmap")
+library("ggplot2")
+
+countsTable <- read.table("/N/slate/primukh/FLAGRIPSeq/Raw_data/Unzipped_files/Results_FLAGRIP/RIPSEq_Analysis/counts.tsv", header = TRUE, row.names = 1)
+experimentData <- read.table("/N/slate/primukh/FLAGRIPSeq/Raw_data/Unzipped_files/Results_FLAGRIP/RIPSEq_Analysis/experiment.txt", header=TRUE)
+rownames(experimentData) <- experimentData$sample
