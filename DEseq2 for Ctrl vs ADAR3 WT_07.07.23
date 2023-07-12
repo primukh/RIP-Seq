@@ -97,6 +97,34 @@ write(pcaData$labels$y, stderr())
 save.image(paste("DE_session.RData", sep=""))
 
 
+#Annotating the gene IDs
 
+library(biomaRt, lib.loc = "/geode2/soft/hps/rhel7/bioconductor/3.14")
+library("tidyr")
+library("dplyr")
+library("rlang")
+library("magrittr")
 
+genelist <- read.table("/N/slate/primukh/FLAGRIPSeq/Raw_data/Unzipped_files/Results_FLAGRIP/RIPSEq_Analysis/DESeq2_LRT_Results_PM_07.07.23.tsv", header = TRUE, row.names = 1)
 
+#to view the genelist table
+view(genelist)
+
+#to view colnames
+colnames(genelist)
+
+#On viewing the column names, I realized the ENSEMBL IDs were stored as row names and not as a column defined as Genes so me renaming it manually wasnt helping. 
+#So using the following command, table$newColumn <- row.names(table) I can assign the row names to a new column.
+
+genelist$Gene <- row.names(genelist)
+
+ensembl <- useDataset("hsapiens_gene_ensembl", mart = useMart("ensembl", host = "https://www.ensembl.org"))
+
+annotations <- getBM(attributes=c("ensembl_gene_id", "hgnc_symbol", "description", "gene_biotype"), filters = "ensembl_gene_id", values = genelist$Gene, mart = ensembl)
+
+final_genelist <- inner_join(genelist, annotations, by = c("Gene"="ensembl_gene_id"))
+
+write.csv(final_genelist,file="/N/slate/primukh/FLAGRIPSeq/Raw_data/Unzipped_files/Results_FLAGRIP/RIPSEq_Analysis/Annotated_DESeq2_LRT_Results_PM_07.07.23.csv")
+
+#on local terminal
+scp primukh@carbonate.uits.iu.edu:/N/slate/primukh/FLAGRIPSeq/Raw_data/Unzipped_files/Results_FLAGRIP/RIPSEq_Analysis/Annotated_DESeq2_LRT_Results_PM_07.07.23.csv .
