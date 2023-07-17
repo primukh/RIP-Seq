@@ -30,4 +30,112 @@ countsTable <- read.table("/N/slate/primukh/FLAGRIPSeq/Raw_data/Unzipped_files/R
 experimentData <- read.table("/N/slate/primukh/FLAGRIPSeq/Raw_data/Unzipped_files/Results_FLAGRIP/RIPSEq_Analysis/412vs413/experiment_412vs413.txt", header=TRUE)
 rownames(experimentData) <- experimentData$sample
 
+dds <- DESeqDataSetFromMatrix(countData = countsTable, colData = experimentData, design = ~ assay + condition + condition:replicate + condition:assay)
 
+#DESeq2 would define the ratios based on the order of levels of the factors defining the condition which by default follow the alphabetical order  (ADAR3 and Ctrl). 
+#The first level would be considered denominator. Hence the default fold change was defined as Ctrl / ADAR3. 
+#This can be fixed by redefining the order of the levels as below, bringing Ctrl as the top level.
+#Here, 413 is being considered control (so ratio is ADAR3 WT/R-Dom. Mut)
+
+dds$condition <- factor(dds$condition, levels=c("Ctrl","ADAR3"))  
+
+dds <- DESeq(dds, test="LRT", reduced = ~ 1)
+
+res_LRT <- results(dds, test="LRT")
+
+length(which(res_LRT$padj <= 0.05)) 
+#this allows to select for genes that have padj lower than 0.05 and prints the number on R. 
+
+write.table(res_LRT, file="/N/slate/primukh/FLAGRIPSeq/Raw_data/Unzipped_files/Results_FLAGRIP/RIPSEq_Analysis/412vs413/DESeq2_LRT_Results_412vs413_PM_07.17.23.tsv", quote=FALSE, sep="\t", na="NA", col.names=NA)
+
+normcounts <- counts(dds, normalized=T)
+
+write.table(normcounts, file="/N/slate/primukh/FLAGRIPSeq/Raw_data/Unzipped_files/Results_FLAGRIP/RIPSEq_Analysis/412vs413/normalized_countstable_412vs413.txt", quote=FALSE, sep="\t", col.names=NA)
+
+sizefactors <- sizeFactors(dds)
+
+write.table(sizefactors, file="/N/slate/primukh/FLAGRIPSeq/Raw_data/Unzipped_files/Results_FLAGRIP/RIPSEq_Analysis/412vs413/SizeFactors_412vs413.txt", quote=FALSE, sep="\t", col.names=NA)
+
+plotPCA_ram <- function(object, intgroup = "condition", ntop = 500, returnData = FALSE) {
+ rv <- rowVars(assay(object))
+ select <- order(rv, decreasing = TRUE)[seq_len(min(ntop, length(rv)))]
+ pca <- prcomp(t(assay(object)[select, ]))
+ percentVar <- pca$sdev^2/sum(pca$sdev^2)
+write.table(percentVar, file="/N/slate/primukh/FLAGRIPSeq/Raw_data/Unzipped_files/Results_FLAGRIP/RIPSEq_Analysis/412vs413/explained_variance.txt", quote=FALSE, sep="\t", col.names=NA)
+ if (!all(intgroup %in% names(colData(object)))) {
+             stop("the argument 'intgroup' should specify columns of colData(dds)")
+         }
+ intgroup.df <- as.data.frame(colData(object)[, intgroup,
+             drop = FALSE])
+         group <- if (length(intgroup) > 1) {
+             factor(apply(intgroup.df, 1, paste, collapse = ":"))
+         }
+         else {
+             colData(object)[[intgroup]]
+         }
+         d <- data.frame(PC2 = pca$x[, 2], PC3 = pca$x[, 3], group = group,
+             intgroup.df, name = colnames(object))
+         if (returnData) {
+             attr(d, "percentVar") <- percentVar[2:3]
+             return(d)
+         }
+ggplot(data = d, aes_string(x = "PC2", y = "PC3", color = "group")) +
+             geom_point(size = 3) + xlab(paste0("PC2: ", round(percentVar[2] *
+             100), "% variance")) + ylab(paste0("PC3: ", round(percentVar[3] *
+             100), "% variance")) + coord_fixed()
+     }
+
+pdf("/N/slate/primukh/FLAGRIPSeq/Raw_data/Unzipped_files/Results_FLAGRIP/RIPSEq_Analysis/412vs413/DESeq2_LRT_Results_412vs413_PM_07.17.23.pdf")
+        pcaData<-plotPCA(rld)
+        print(pcaData)
+pcaData_ram <- plotPCA_ram(rld)
+print(pcaData_ram)
+rlogMat <- assay(rld)
+colours = colorRampPalette( rev(brewer.pal(9, "Blues")) )(255)
+sampleDists <- dist( t( rlogMat ) )
+        sampleDistMatrix <- as.matrix( sampleDists )
+        rownames(sampleDistMatrix) <- rld$sample
+        colnames(sampleDistMatrix) <- rld$sample
+heatmap.2( sampleDistMatrix, trace="none", col=colours, cexRow=1, cexCol=1,margins=c(12,8), srtCol=45)
+dev.off()
+
+write.table(sampleDistMatrix, file=paste("/N/slate/primukh/FLAGRIPSeq/Raw_data/Unzipped_files/Results_FLAGRIP/RIPSEq_Analysis/412vs413/distance_matrix.txt", sep = ""), quote=FALSE, sep="\t", col.names=NA)
+write.table(rlogMat, file=paste("/N/slate/primukh/FLAGRIPSeq/Raw_data/Unzipped_files/Results_FLAGRIP/RIPSEq_Analysis/412vs413/regularized_log.txt", sep = ""), quote=FALSE, sep="\t", col.names=NA)
+write.table(pcaData$data, file=paste("/N/slate/primukh/FLAGRIPSeq/Raw_data/Unzipped_files/Results_FLAGRIP/RIPSEq_Analysis/412vs413/loadings.txt", sep = ""), quote=FALSE, sep="\t", col.names=NA)
+write.table(pcaData_ram$data, file=paste("/N/slate/primukh/FLAGRIPSeq/Raw_data/Unzipped_files/Results_FLAGRIP/RIPSEq_Analysis/412vs413/loadings_PC2_PC3.txt", sep = ""), quote=FALSE, sep="\t", col.names=NA)
+write(pcaData$labels$x, stderr())
+write(pcaData$labels$y, stderr())
+save.image(paste("/N/slate/primukh/FLAGRIPSeq/Raw_data/Unzipped_files/Results_FLAGRIP/RIPSEq_Analysis/412vs413/DE_session.RData", sep=""))
+
+
+#Annotating the gene IDs
+
+library(biomaRt, lib.loc = "/geode2/soft/hps/rhel7/bioconductor/3.14")
+library("tidyr")
+library("dplyr")
+library("rlang")
+library("magrittr")
+
+genelist <- read.table("/N/slate/primukh/FLAGRIPSeq/Raw_data/Unzipped_files/Results_FLAGRIP/RIPSEq_Analysis/412vs413/DESeq2_LRT_Results_412vs413_PM_07.17.23.tsv", header = TRUE, row.names = 1)
+
+#to view the genelist table
+view(genelist)
+
+#to view colnames
+colnames(genelist)
+
+#On viewing the column names, I realized the ENSEMBL IDs were stored as row names and not as a column defined as Genes so me renaming it manually wasnt helping. 
+#So using the following command, table$newColumn <- row.names(table) I can assign the row names to a new column.
+
+genelist$Gene <- row.names(genelist)
+
+ensembl <- useDataset("hsapiens_gene_ensembl", mart = useMart("ensembl", host = "https://www.ensembl.org"))
+
+annotations <- getBM(attributes=c("ensembl_gene_id", "hgnc_symbol", "description", "gene_biotype"), filters = "ensembl_gene_id", values = genelist$Gene, mart = ensembl)
+
+final_genelist <- inner_join(genelist, annotations, by = c("Gene"="ensembl_gene_id"))
+
+write.csv(final_genelist,file="/N/slate/primukh/FLAGRIPSeq/Raw_data/Unzipped_files/Results_FLAGRIP/RIPSEq_Analysis/412vs413/Annotated_DESeq2_LRT_Results_412vs413_PM_07.17.23.csv")
+
+#on local terminal
+scp primukh@carbonate.uits.iu.edu:/N/slate/primukh/FLAGRIPSeq/Raw_data/Unzipped_files/Results_FLAGRIP/RIPSEq_Analysis/412vs413/* .
