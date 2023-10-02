@@ -33,7 +33,8 @@ dds <- DESeqDataSetFromMatrix(countData = countsTable, colData = experimentData,
 #DESeq2 would define the ratios based on the order of levels of the factors defining the condition which by default follow the alphabetical order  (ADAR3 and Ctrl). 
 #The first level would be considered denominator. Hence the default fold change was defined as Ctrl / ADAR3. 
 #This can be fixed by redefining the order of the levels as below, bringing ADAR3 as the top level.
-#Here, 412 is being considered control (so ratio is ADAR3 R-mut/WT). The experiment.txt file has been modified such that WT is labeled as Ctrl and R-mut is considered ADAR3. 
+#Here, 412 is being considered control (so ratio is ADAR3 R-mut/WT). The experiment.txt file has been modified such that WT is labeled as Ctrl and R-mut is considered ADAR3 allowing us to get log2fc of all targets w.r.t control. 
+#Positive values will correspod to targets enriched in mutant vs negative values will correspond to transcripts depleted in R-mutanyt/enriched in WT a.k.a loss in binding. 
 
 dds$condition <- factor(dds$condition, levels=c("Ctrl","ADAR3"))  
 
