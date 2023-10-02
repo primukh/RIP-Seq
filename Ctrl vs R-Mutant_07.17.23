@@ -17,8 +17,10 @@ rownames(experimentData) <- experimentData$sample
 
 dds <- DESeqDataSetFromMatrix(countData = countsTable, colData = experimentData, design = ~ assay + condition + condition:replicate + condition:assay)
 
-#The first level would be considered denominator. Hence the default fold change was defined as Ctrl / ADAR3 R-mut. 
-#This can be fixed by redefining the order of the levels as below, bringing Ctrl as the top level.
+#The first level would be considered denominator (determined based on alphabetical order). Hence the default fold change was defined as Ctrl / ADAR3 R-mut. 
+#This can be fixed by redefining the order of the levels as below, bringing Ctrl as the top level a.k.a denominator. 
+#This pipeline identifies targets enriched in R-mutant over ctrl. 
+
 
 dds$condition <- factor(dds$condition, levels=c("Ctrl","ADAR3"))  
 dds <- DESeq(dds, test="LRT", reduced = ~ 1)
