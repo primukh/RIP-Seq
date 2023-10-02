@@ -26,6 +26,8 @@ dds <- DESeqDataSetFromMatrix(countData = countsTable, colData = experimentData,
 #DESeq2 would define the ratios based on the order of levels of the factors defining the condition which by default follow the alphabetical order  (ADAR3 and Ctrl). 
 #The first level would be considered denominator. Hence the default fold change was defined as Ctrl / ADAR3. 
 #This can be fixed by redefining the order of the levels as below, bringing Ctrl as the top level.
+#Thus, this pipeline gives transcripts that are enriched in WT-RIP over Ctrl-RIP
+
 
 dds$condition <- factor(dds$condition, levels=c("Ctrl","ADAR3"))  
 
